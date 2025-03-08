@@ -1,62 +1,62 @@
+# Dockerfile: owntone
+# Owntone Docker Image.
+
+LABEL       org.opencontainers.image.source https://github.com/kafouche/owntone
+
 # BUILD STAGE
 
-FROM        debian:bullseye-slim as buildstage
+FROM        ghcr.io/kafouche/alpine:3.21 as buildstage
 
-ARG         DAAPD_RELEASE
+ARG         RELEASE=28.12
 
-RUN         printf '# Install build packages.\n' \
-            && apt update -qq \
-            && apt full-upgrade -qq --yes \
-            && apt install --no-install-recommends -qq --yes \
-                ca-certificates \
-                curl \
-            && apt install --no-install-recommends -qq --yes \
-                build-essential \
-                autotools-dev \
+# `--enable-chromecast` depends on `libgnutls*-dev`
+# `--with-pulseaudio` depends on `libpulse-dev`
+# `--enable-spotify` depends on `libprotobuf-c-dev`
+# `--enable-webinterface` depends on `libwebsockets-dev`
+# `--with-libwebsockets` depends on `libwebsockets-dev`
+
+RUN         apk --no-cache --update upgrade \
+            && apk --no-cache --update add \
+                alsa-lib-dev \
                 autoconf \
                 automake \
-                libtool \
-                gettext \
-                gawk \
-                gperf \
+                avahi-dev \
                 bison \
+                confuse-dev \
+                curl-dev \
                 flex \
-                libconfuse-dev \
-                libunistring-dev \
-                libsqlite3-dev \
-                libavcodec-dev \
-                libavformat-dev \
-                libavfilter-dev \
-                libswscale-dev \
-                libavutil-dev \
-                libasound2-dev \
-                libmxml-dev \
-                libgcrypt20-dev \
-                libavahi-client-dev \
-                zlib1g-dev \
+                ffmpeg-dev \
+                g++ \
+                gawk \
+                gettext \
+                gperf \
+                json-c-dev \
                 libevent-dev \
+                libgcrypt-dev \
                 libplist-dev \
                 libsodium-dev \
-                libjson-c-dev \
+                libtool \
+                libunistring-dev \
                 libwebsockets-dev \
-                libcurl4-openssl-dev \
-                libprotobuf-c-dev \
-                libgnutls*-dev \
-            && if [ -z "${DAAPD_RELEASE}" ]; then \
-                DAAPD_RELEASE="$(curl --silent --request GET \
-                    "https://api.github.com/repos/owntone/owntone-server/releases/latest" \
-                    | awk '/tag_name/{print $4;exit}' FS='[""]')"; \
-            fi \
+                libxml2-dev \
+                make \
+                protobuf-c-dev \
+                sqlite-dev \
+                zlib-dev
+
+RUN         apk --no-cache --update add \
+                curl \
             && curl \
-                --location "https://github.com/owntone/owntone-server/archive/${DAAPD_RELEASE}.tar.gz" \
-                --output /tmp/owntone-server.tar.gz \
-            && mkdir --parents /tmp/owntone-server \
-            && tar --directory=/tmp/owntone-server --extract --file=/tmp/owntone-server.tar.gz --gzip --strip-components=1
+                --location "https://github.com/owntone/owntone-server/archive/$RELEASE.tar.gz" \
+                --output /tmp/owntone.tar.gz \
+            && mkdir --parents /tmp/owntone \
+            && tar --directory=/tmp/owntone --extract \
+                --file=/tmp/owntone.tar.gz \
+                --gzip --strip-components=1
 
-WORKDIR     /tmp/owntone-server
+WORKDIR     /tmp/owntone
 
-RUN         printf '# Build OwnTone Server.\n' \
-            && autoreconf --install --verbose \
+RUN         autoreconf --install --verbose \
             && ./configure \
                 --infodir=/usr/share/info \
                 --localstatedir=/var \
@@ -64,150 +64,56 @@ RUN         printf '# Build OwnTone Server.\n' \
                 --sysconfdir=/etc \
                 --prefix=/usr \
                 --disable-install_systemd \
-                --enable-chromecast \
+                --disable-lastfm \
+                --disable-mpd \
+                --disable-spotify \
+                --disable-webinterface \
+                --disable-libwebsockets \
                 --enable-itunes \
-                --enable-lastfm \
-                --enable-mpd \
-                --enable-spotify \
             && make \
-            && make DESTDIR=/tmp/owntone install \
-            && rm --recursive --force \
-                /tmp/owntone/config \
-                /tmp/owntone/var
+            && make check \
+            && make DESTDIR=/tmp/owntone/target install \
+            && rm -rf \
+                /tmp/owntone/target/etc \
+                /tmp/owntone/target/var
 
 # RUN STAGE
 
-FROM        debian:bullseye-slim
+FROM        ghcr.io/kafouche/alpine:3.21
 
-RUN         printf '# Install run packages.\n' \
-            && apt update -qq \
-            && apt full-upgrade -qq --yes \
-            && apt install --no-install-recommends -qq --yes \
-                avahi-daemon \
-                libantlr3c-3.4-0 \
-                libasound2 \
-                libavahi-client3 \
-                libavahi-common3 \
-                libavcodec58 \
-                libavfilter7 \
-                libavformat58 \
-                libavutil56 \
-                libc6 \
-                libconfuse2 \
-                libcurl3-gnutls \
-                libcurl4 \
-                libevent-2.1-7 \
-                libevent-pthreads-2.1-7 \
-                libgcrypt20 \
-                libgnutls30 \
-                libgpg-error0 \
-                libjson-c5 \
-                libmxml1 \
-                libplist3 \
-                libprotobuf-c1 \
-                libsodium23 \
-                libsqlite3-0 \
-                libswscale5 \
-                libunistring2 \
-                libwebsockets16 \
-                lsb-base \
-                psmisc \
-                zlib1g \
-            && mkdir --parents /cache /music /var/cache/owntone
+RUN         apk --no-cache --update upgrade \
+            && apk --no-cache --update add \
+                avahi \
+                confuse \
+                dbus \
+                ffmpeg \
+                json-c \
+                libcurl \
+                libevent \
+                libgcrypt \
+                libplist \
+                libsodium \
+                libunistring \
+                libuuid \
+                libwebsockets \
+                libxml2 \
+                sqlite \
+                sqlite-libs
 
-COPY        --from=buildstage       /tmp/owntone/           /
-COPY                                docker-entrypoint.sh    /
+COPY        --from=buildstage /tmp/owntone/target/  /
+COPY                          owntone.conf          /etc/
 
-ENV         GENERAL_UID=owntone \
-            GENERAL_DB_PATH=/cache/songs.db3 \
-            GENERAL_DB_BACKUP_PATH=/cache/songs.bak \
-            GENERAL_LOGFILE=/var/log/owntone.log \
-            GENERAL_LOGLEVEL=log \
-            GENERAL_ADMIN_PASSWORD= \
-            GENERAL_WEBSOCKET_PORT=3688 \
-            GENERAL_WEBSOCKET_INTERFACE= \
-            GENERAL_TRUSTED_NETWORKS= \
-            GENERAL_IPV6=yes \
-            GENERAL_BIND_ADDRESS= \
-            GENERAL_CACHE_PATH= \
-            GENERAL_CACHE_DAAP_THRESHOLD= \
-            GENERAL_SPEAKER_AUTOSELECT= \
-            GENERAL_HIGH_RESOLUTION_CLOCK= \
-            LIBRARY_NAME=%h \
-            LIBRARY_PORT=3689 \
-            LIBRARY_PASSWORD= \
-            LIBRARY_FOLLOW_SYMLINKS= \
-            LIBRARY_COMPILATION_ARTIST= \
-            LIBRARY_HIDE_SINGLES= \
-            LIBRARY_RADIO_PLAYLISTS= \
-            LIBRARY_NAME_LIBRARY= \
-            LIBRARY_NAME_MUSIC= \
-            LIBRARY_NAME_MOVIES= \
-            LIBRARY_NAME_TVSHOWS= \
-            LIBRARY_NAME_PODCASTS= \
-            LIBRARY_NAME_AUDIOBOOKS= \
-            LIBRARY_NAME_RADIO= \
-            LIBRARY_ARTWORK_INDIVIDUAL= \
-            LIBRARY_FILESCAN_DISABLE= \
-            LIBRARY_ONLY_FIRST_GENRE= \
-            LIBRARY_M3U_OVERRIDES= \
-            LIBRARY_ITUNES_OVERRIDE= \
-            LIBRARY_ITUNES_SMARTPL= \
-            LIBRARY_PIPE_AUTOSTART= \
-            LIBRARY_RATING_UPDATES= \
-            LIBRARY_ALLOW_MODIFYING_STORED_PLAYLISTS= \
-            LIBRARY_DEFAULT_PLAYLIST_DIRECTORY= \
-            LIBRARY_CLEAR_QUEUE_ON_STOP_DISABLE= \
-            AUDIO_NICKNAME=Computer \
-            AUDIO_TYPE= \
-            AUDIO_SERVER= \
-            AUDIO_CARD= \
-            AUDIO_MIXER= \
-            AUDIO_MIXER_DEVICE= \
-            AUDIO_SYNC_DISABLE= \
-            AUDIO_OFFSET_MS= \
-            AUDIO_ADJUST_PERIOD_SECONDS= \
-            ALSA_CARD_NAME= \
-            ALSA_NICKNAME= \
-            ALSA_MIXER= \
-            ALSA_MIXER_DEVICE= \
-            FIFO_NICKNAME= \
-            FIFO_PATH= \
-            AIRPLAY_SHARED_CONTROL_PORT= \
-            AIRPLAY_SHARED_TIMING_PORT= \
-            AIRPLAY_MAX_VOLUME= \
-            AIRPLAY_EXCLUDE= \
-            AIRPLAY_PERMANENT= \
-            AIRPLAY_RECONNECT= \
-            AIRPLAY_PASSWORD= \
-            AIRPLAY_RAOP_DISABLE= \
-            AIRPLAY_NICKNAME= \
-            CHROMECAST_MAX_VOLUME= \
-            CHROMECAST_EXCLUDE= \
-            CHROMECAST_NICKNAME= \
-            SPOTIFY_BITRATE= \
-            SPOTIFY_BASE_PLAYLIST_DISABLE= \
-            SPOTIFY_ARTIST_OVERRIDE= \
-            SPOTIFY_ALBUM_OVERRIDE= \
-            RCP_EXCLUDE= \
-            RCP_CLEAR_ON_CLOSE= \
-            MPD_PORT= \
-            MPD_HTTP_PORT= \
-            SQLITE_PRAGMA_CACHE_SIZE_LIBRARY= \
-            SQLITE_PRAGMA_CACHE_SIZE_CACHE= \
-            SQLITE_PRAGMA_JOURNAL_MODE= \
-            SQLITE_PRAGMA_SYNCHRONOUS= \
-            SQLITE_PRAGMA_MMAP_SIZE_LIBRARY= \
-            SQLITE_PRAGMA_MMAP_SIZE_CACHE= \
-            SQLITE_VACUUM= \
-            STREAMING_SAMPLE_RATE= \
-            STREAMING_BIT_RATE=
+RUN         adduser -D -G users -h /cache -s /sbin/nologin -S owntone \
+            && mkdir --parents /cache /media \
+            && chmod 644 /etc/owntone.conf
 
-EXPOSE      3689
-
-VOLUME      /cache \
-            /music
+VOLUME      /cache
 
 WORKDIR     /cache
 
-ENTRYPOINT  [ "/docker-entrypoint.sh" ]
+EXPOSE      3689
+
+USER        owntone
+
+ENTRYPOINT  [ "/usr/sbin/owntone" ]
+CMD         [ "-f" ]
