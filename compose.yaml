@@ -1,0 +1,23 @@
+services:
+  owntone:
+    image: ghcr.io/kafouche/owntone:latest
+    name: "openvpn"
+    network_mode: host
+    restart: "unless-stopped"
+    #user: 1000:1000
+    volumes:
+      - type: bind
+        read_only: true
+        source: "/var/run/dbus"
+        target: "/var/run/dbus"
+      - type: bind
+        read_only: true
+        source: "/var/run/avahi-daemon/socket"
+        target: "/var/run/avahi-daemon/socket"
+      - type: bind
+        source: "./cache/"
+        target: "/var/cache/owntone/"
+      - type: bind
+        read_only: true
+        source: "/path/to/music/"
+        target: "/srv/music/"
