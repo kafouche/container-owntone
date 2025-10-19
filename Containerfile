@@ -1,18 +1,6 @@
 # Dockerfile: owntone
 # Kafouche OwnTone Server Image (source).
 
-LABEL       org.opencontainers.image.authors="kafouche"
-LABEL       org.opencontainers.image.base.name="ghcr.io/kafouche/owntone:28.12"
-LABEL       org.opencontainers.image.ref.name="ghcr.io/kafouche/alpine"
-LABEL       org.opencontainers.image.source="https://github.com/kafouche/owntone"
-LABEL       org.opencontainers.image.title="OwnTone"
-LABEL       org.opencontainers.image.version="28.12"
-LABEL       image.tags[0]="ghcr.io/kafouche/owntone:latest-src"
-LABEL       image.tags[1]="ghcr.io/kafouche/owntone:latest"
-
-
-# ------------------------------------------------------------------------------
-
 ARG         RELEASE=28.12
 
 ARG         SOURCE_URL=https://github.com/owntone/owntone-server/archive/$RELEASE.tar.gz
@@ -112,6 +100,17 @@ RUN         autoreconf \
 # RUN STAGE
 
 FROM        ghcr.io/kafouche/alpine:latest
+
+LABEL       org.opencontainers.image.authors="kafouche"
+LABEL       org.opencontainers.image.base.name="ghcr.io/kafouche/owntone:28.12"
+LABEL       org.opencontainers.image.ref.name="ghcr.io/kafouche/alpine"
+LABEL       org.opencontainers.image.source="https://github.com/kafouche/container-owntone"
+LABEL       org.opencontainers.image.title="OwnTone"
+LABEL       org.opencontainers.image.version="28.12"
+LABEL       image.tags[0]="ghcr.io/kafouche/owntone:latest-src"
+LABEL       image.tags[1]="ghcr.io/kafouche/owntone:latest"
+
+# ------------------------------------------------------------------------------
 
 ARG         TARGET_DIR
 
